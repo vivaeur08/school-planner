@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SchoolPlanner - Mon Agenda Scolaire</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0c1017">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Mon agenda scolaire intelligent - accessible partout sur tous mes écrans">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-icon">📚</div>
+            <h1>SchoolPlanner</h1>
+            <div class="splash-loader"><div class="splash-bar"></div></div>
+            <p>Chargement de ton agenda...</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">📚</span>
+                <span class="logo-text">SchoolPlanner</span>
+            </div>
+            <button id="sidebar-close" class="sidebar-close"><i class="fas fa-times"></i></button>
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item active" data-view="dashboard">
+                <i class="fas fa-th-large"></i><span>Tableau de bord</span>
+            </li>
+            <li class="nav-item" data-view="week">
+                <i class="fas fa-calendar-week"></i><span>Semainier</span>
+            </li>
+            <li class="nav-item" data-view="schedule">
+                <i class="fas fa-clock"></i><span>Emploi du temps</span>
+            </li>
+            <li class="nav-item" data-view="homework">
+                <i class="fas fa-book"></i><span>Devoirs</span>
+            </li>
+            <li class="nav-item" data-view="subjects">
+                <i class="fas fa-palette"></i><span>Matières</span>
+            </li>
+            <li class="nav-item" data-view="discord">
+                <i class="fab fa-discord"></i><span>Alertes Discord</span>
+            </li>
+            <li class="nav-item" data-view="settings">
+                <i class="fas fa-cog"></i><span>Paramètres</span>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="week-indicator">
+                <i class="fas fa-calendar"></i>
+                <span id="current-week-label">Semaine 1</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="main-content">
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <button id="menu-toggle" class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="topbar-title">
+                <h1 id="page-title">Tableau de bord</h1>
+                <span id="page-subtitle" class="subtitle"></span>
+            </div>
+            <div class="topbar-actions">
+                <button id="btn-add-homework" class="btn-primary btn-glow" title="Ajouter un devoir">
+                    <i class="fas fa-plus"></i>
+                    <span class="btn-text">Ajouter</span>
+                </button>
+                <button id="btn-refresh" class="btn-icon" title="Rafraîchir">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view active">
+            <div class="dashboard-grid">
+                <!-- Stats Cards -->
+                <div class="stats-row">
+                    <div class="stat-card stat-urgent">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="stat-urgent">0</span>
+                            <span class="stat-label">Urgent</span>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-today">
+                        <div class="stat-icon"><i class="fas fa-sun"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="stat-today">0</span>
+                            <span class="stat-label">Aujourd'hui</span>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-week">
+                        <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="stat-week">0</span>
+                            <span class="stat-label">Cette semaine</span>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-done">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="stat-done">0</span>
+                            <span class="stat-label">Terminés</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Schedule -->
+                <div class="dashboard-card card-schedule">
+                    <div class="card-header">
+                        <h2><i class="fas fa-clock"></i> Cours aujourd'hui</h2>
+                        <span class="badge" id="today-date"></span>
+                    </div>
+                    <div class="card-body" id="today-schedule"></div>
+                </div>
+
+                <!-- Upcoming Homework -->
+                <div class="dashboard-card card-homework">
+                    <div class="card-header">
+                        <h2><i class="fas fa-book"></i> Prochains devoirs</h2>
+                        <button class="btn-small btn-see-all" data-target="homework">Voir tout</button>
+                    </div>
+                    <div class="card-body" id="upcoming-homework"></div>
+                </div>
+
+                <!-- Quick Week Preview -->
+                <div class="dashboard-card card-week-preview">
+                    <div class="card-header">
+                        <h2><i class="fas fa-eye"></i> Aperçu de la semaine</h2>
+                        <div class="week-nav">
+                            <button id="prev-week-dash" class="btn-icon-small"><i class="fas fa-chevron-left"></i></button>
+                            <span id="week-label-dash">Cette semaine</span>
+                            <button id="next-week-dash" class="btn-icon-small"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="week-preview"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- WEEK VIEW -->
+        <section id="view-week" class="view">
+            <div class="week-controls">
+                <button id="prev-week" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                <h2 id="week-title">Semaine du ...</h2>
+                <button id="today-btn" class="btn-secondary">Aujourd'hui</button>
+                <button id="next-week" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="week-grid" id="week-grid"></div>
+        </section>
+
+        <!-- SCHEDULE VIEW -->
+        <section id="view-schedule" class="view">
+            <div class="schedule-controls">
+                <h2>Mon Emploi du Temps</h2>
+                <div class="schedule-actions">
+                    <button id="btn-edit-schedule" class="btn-secondary">
+                        <i class="fas fa-edit"></i> Modifier
+                    </button>
+                    <button id="btn-reset-schedule" class="btn-danger-outline">
+                        <i class="fas fa-undo"></i> Réinitialiser
+                    </button>
+                </div>
+            </div>
+            <div class="schedule-table-wrapper">
+                <table class="schedule-table" id="schedule-table"></table>
+            </div>
+            <p class="schedule-hint">
+                <i class="fas fa-info-circle"></i>
+                Cliquez sur un cours pour voir les devoirs. Glissez-déposez pour réorganiser.
+            </p>
+        </section>
+
+        <!-- HOMEWORK VIEW -->
+        <section id="view-homework" class="view">
+            <div class="homework-controls">
+                <div class="homework-filters">
+                    <button class="filter-btn active" data-filter="all">Tous</button>
+                    <button class="filter-btn" data-filter="pending">À faire</button>
+                    <button class="filter-btn" data-filter="done">Terminés</button>
+                    <button class="filter-btn" data-filter="overdue">En retard</button>
+                </div>
+                <div class="homework-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="homework-search" placeholder="Rechercher un devoir...">
+                </div>
+            </div>
+            <div class="homework-list" id="homework-list"></div>
+        </section>
+
+        <!-- SUBJECTS VIEW -->
+        <section id="view-subjects" class="view">
+            <div class="subjects-header">
+                <h2>Mes Matières</h2>
+                <button id="btn-add-subject" class="btn-primary">
+                    <i class="fas fa-plus"></i> Ajouter une matière
+                </button>
+            </div>
+            <div class="subjects-grid" id="subjects-grid"></div>
+        </section>
+
+        <!-- DISCORD VIEW -->
+        <section id="view-discord" class="view">
+            <div class="discord-setup">
+                <div class="discord-header">
+                    <i class="fab fa-discord discord-big-icon"></i>
+                    <h2>Alertes Discord</h2>
+                    <p>Reçois des rappels automatiques sur Discord quand un devoir n'est pas fait !</p>
+                </div>
+                <div class="discord-form">
+                    <div class="form-group">
+                        <label for="webhook-url">
+                            <i class="fas fa-link"></i> URL du Webhook Discord
+                        </label>
+                        <input type="url" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
+                        <small>Crée un webhook dans les paramètres de ton salon Discord</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="alert-time">
+                            <i class="fas fa-clock"></i> Heure de rappel quotidien
+                        </label>
+                        <input type="time" id="alert-time" value="19:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="alert-advance">
+                            <i class="fas fa-hourglass-half"></i> Rappel combien de jours avant ?
+                        </label>
+                        <select id="alert-advance">
+                            <option value="0">Le jour même</option>
+                            <option value="1" selected>1 jour avant</option>
+                            <option value="2">2 jours avant</option>
+                            <option value="3">3 jours avant</option>
+                        </select>
+                    </div>
+                    <div class="form-group toggle-group">
+                        <label><i class="fas fa-bell"></i> Activer les alertes</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alerts-enabled">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="discord-buttons">
+                        <button id="btn-save-discord" class="btn-primary">
+                            <i class="fas fa-save"></i> Sauvegarder
+                        </button>
+                        <button id="btn-test-discord" class="btn-secondary">
+                            <i class="fas fa-paper-plane"></i> Tester le webhook
+                        </button>
+                    </div>
+                </div>
+                <div class="discord-tutorial">
+                    <h3><i class="fas fa-question-circle"></i> Comment créer un webhook ?</h3>
+                    <ol>
+                        <li>Va dans les <strong>paramètres</strong> de ton salon Discord</li>
+                        <li>Clique sur <strong>Intégrations</strong></li>
+                        <li>Clique sur <strong>Créer un webhook</strong></li>
+                        <li>Copie l'<strong>URL du webhook</strong></li>
+                        <li>Colle-la ici !</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS VIEW -->
+        <section id="view-settings" class="view">
+            <div class="settings-content">
+                <h2><i class="fas fa-cog"></i> Paramètres</h2>
+
+                <div class="settings-section">
+                    <h3>Apparence</h3>
+                    <div class="setting-item">
+                        <label>Thème</label>
+                        <div class="theme-selector">
+                            <button class="theme-btn active" data-theme="dark">🌙 Sombre</button>
+                            <button class="theme-btn" data-theme="light">☀️ Clair</button>
+                            <button class="theme-btn" data-theme="ocean">🌊 Océan</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Synchronisation</h3>
+                    <div class="setting-item">
+                        <label>Synchroniser depuis JSON</label>
+                        <button id="btn-sync-json" class="btn-primary">
+                            <i class="fas fa-sync-alt"></i> Synchroniser
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <small style="color:var(--text-muted); flex:1; margin-right:1rem">
+                            Charge les données depuis <code>data/homework.json</code>. Utile pour synchroniser entre appareils via GitHub.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Données</h3>
+                    <div class="setting-item">
+                        <label>Exporter mes données</label>
+                        <button id="btn-export" class="btn-secondary">
+                            <i class="fas fa-download"></i> Exporter JSON
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <label>Import des données</label>
+                        <input type="file" id="import-file" accept=".json" style="display:none">
+                        <button id="btn-import" class="btn-secondary">
+                            <i class="fas fa-upload"></i> Importer JSON
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <label>Exporter pour GitHub</label>
+                        <button id="btn-export-github" class="btn-secondary">
+                            <i class="fab fa-github"></i> Export homework.json
+                        </button>
+                    </div>
+                    <div class="setting-item danger">
+                        <label>Supprimer toutes les données</label>
+                        <button id="btn-clear-data" class="btn-danger">
+                            <i class="fas fa-trash"></i> Tout supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL: Add/Edit Homework -->
+    <div id="modal-homework" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-homework-title"><i class="fas fa-plus-circle"></i> Nouveau Devoir</h2>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="homework-form" class="modal-body">
+                <input type="hidden" id="hw-id">
+                <div class="form-group">
+                    <label for="hw-subject">Matière *</label>
+                    <select id="hw-subject" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="hw-title">Titre du devoir *</label>
+                    <input type="text" id="hw-title" placeholder="Ex: Exercices page 42" required>
+                </div>
+                <div class="form-group">
+                    <label for="hw-description">Description</label>
+                    <textarea id="hw-description" rows="3" placeholder="Détails du devoir..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hw-date">Date limite *</label>
+                        <input type="date" id="hw-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hw-priority">Priorité</label>
+                        <select id="hw-priority">
+                            <option value="low">🟢 Basse</option>
+                            <option value="medium" selected>🟡 Moyenne</option>
+                            <option value="high">🔴 Haute</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="hw-type">Type</label>
+                    <select id="hw-type">
+                        <option value="homework">📝 Devoir maison</option>
+                        <option value="exam">📋 Contrôle</option>
+                        <option value="project">🎯 Projet</option>
+                        <option value="reading">📖 Lecture</option>
+                        <option value="other">📌 Autre</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary modal-cancel">Annuler</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Subject -->
+    <div id="modal-subject" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="modal-subject-title"><i class="fas fa-plus-circle"></i> Nouvelle Matière</h2>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="subject-form" class="modal-body">
+                <input type="hidden" id="subj-id">
+                <div class="form-group">
+                    <label for="subj-name">Nom de la matière *</label>
+                    <input type="text" id="subj-name" placeholder="Ex: Mathématiques" required>
+                </div>
+                <div class="form-group">
+                    <label for="subj-teacher">Professeur</label>
+                    <input type="text" id="subj-teacher" placeholder="Ex: M. Dupont">
+                </div>
+                <div class="form-group">
+                    <label for="subj-room">Salle</label>
+                    <input type="text" id="subj-room" placeholder="Ex: F 301">
+                </div>
+                <div class="form-group">
+                    <label for="subj-color">Couleur</label>
+                    <div class="color-picker" id="color-picker">
+                        <button type="button" class="color-option" data-color="#f43f5e" style="background:#f43f5e"></button>
+                        <button type="button" class="color-option" data-color="#f97316" style="background:#f97316"></button>
+                        <button type="button" class="color-option" data-color="#eab308" style="background:#eab308"></button>
+                        <button type="button" class="color-option" data-color="#22c55e" style="background:#22c55e"></button>
+                        <button type="button" class="color-option" data-color="#14b8a6" style="background:#14b8a6"></button>
+                        <button type="button" class="color-option" data-color="#3b82f6" style="background:#3b82f6"></button>
+                        <button type="button" class="color-option" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+                        <button type="button" class="color-option" data-color="#ec4899" style="background:#ec4899"></button>
+                        <button type="button" class="color-option" data-color="#6366f1" style="background:#6366f1"></button>
+                        <button type="button" class="color-option" data-color="#06b6d4" style="background:#06b6d4"></button>
+                        <button type="button" class="color-option" data-color="#84cc16" style="background:#84cc16"></button>
+                        <button type="button" class="color-option" data-color="#a855f7" style="background:#a855f7"></button>
+                    </div>
+                    <input type="hidden" id="subj-color" value="#3b82f6">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary modal-cancel">Annuler</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Course Detail -->
+    <div id="modal-course-detail" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header" id="course-detail-header">
+                <h2><i class="fas fa-book-open"></i> <span id="course-detail-name">Cours</span></h2>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="course-detail-body">
+                <div class="course-info">
+                    <p><i class="fas fa-user"></i> Prof : <span id="course-detail-teacher"></span></p>
+                    <p><i class="fas fa-door-open"></i> Salle : <span id="course-detail-room"></span></p>
+                    <p><i class="fas fa-clock"></i> Horaire : <span id="course-detail-time"></span></p>
+                </div>
+                <div class="course-homework-section">
+                    <h3><i class="fas fa-tasks"></i> Devoirs pour ce cours</h3>
+                    <div id="course-homework-list"></div>
+                    <button id="btn-add-hw-from-course" class="btn-primary btn-full">
+                        <i class="fas fa-plus"></i> Ajouter un devoir pour ce cours
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Schedule Cell -->
+    <div id="modal-schedule-edit" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Modifier le créneau</h2>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="schedule-edit-form" class="modal-body">
+                <input type="hidden" id="sched-day">
+                <input type="hidden" id="sched-slot">
+                <div class="form-group">
+                    <label for="sched-subject">Matière</label>
+                    <select id="sched-subject">
+                        <option value="">-- Vide --</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary modal-cancel">Annuler</button>
+                    <button type="button" id="btn-clear-slot" class="btn-danger-outline">Vider</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> OK
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>

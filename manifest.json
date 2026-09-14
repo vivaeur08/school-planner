@@ -1,0 +1,17 @@
+{
+    "name": "SchoolPlanner",
+    "short_name": "SchoolPlanner",
+    "description": "Mon agenda scolaire intelligent",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0c1017",
+    "theme_color": "#7c6aef",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

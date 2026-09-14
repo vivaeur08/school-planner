@@ -1,0 +1,72 @@
+{
+    "subjects": [
+        { "id": "s1", "name": "VENTE & DEV. COMMER.", "teacher": "MARTIN N.", "room": "F 301 - 302 BTS Tert", "color": "#f43f5e" },
+        { "id": "s2", "name": "ANGLAIS LVA", "teacher": "CATEAULT F.", "room": "F 301 - 302 BTS Tert", "color": "#f97316" },
+        { "id": "s3", "name": "GESTION SINISTRES", "teacher": "DAVOUST S.", "room": "F 301 - 302 BTS Tert", "color": "#8b5cf6" },
+        { "id": "s4", "name": "CULT.PROFES.APPLIQ", "teacher": "ETIENNE G.", "room": "F 301 - 302 BTS Tert", "color": "#14b8a6" },
+        { "id": "s5", "name": "CULTURE GENE.ET EXPR", "teacher": "JOURDAN G.", "room": "F 301 - 302 BTS Tert", "color": "#3b82f6" },
+        { "id": "s6", "name": "RELAT.CLIENT SINISTRE", "teacher": "YOUSFI I.", "room": "F 301 - 302 BTS Tert", "color": "#ec4899" },
+        { "id": "s7", "name": "ACCOMPAGNEMT. PERSO.", "teacher": "JOURDAN G.", "room": "F 304 BTS Tert info", "color": "#06b6d4" },
+        { "id": "s8", "name": "AT. PROFESSIONNALIS.", "teacher": "DAVOUST S., ETIENNE G.", "room": "F 101-102, F 104-107 info", "color": "#6b7280" },
+        { "id": "s9", "name": "RESTI. VECU EN ENT.", "teacher": "", "room": "G 102", "color": "#6366f1" }
+    ],
+    "schedule": {
+        "lundi": [null, {"subjectId": "s2"}, {"subjectId": "s3"}, null, {"subjectId": "s4"}, null, {"subjectId": "s6"}, {"subjectId": "s5"}, null],
+        "mardi": [{"subjectId": "s1"}, {"subjectId": "s2"}, null, null, null, null, {"subjectId": "s3"}, null, null],
+        "mercredi": [null, null, {"subjectId": "s4"}, {"subjectId": "s3"}, null, null, {"subjectId": "s1"}, {"subjectId": "s9"}, null],
+        "jeudi": [null, null, null, null, {"subjectId": "s5"}, null, null, {"subjectId": "s6"}, null],
+        "vendredi": [{"subjectId": "s1"}, null, {"subjectId": "s4"}, {"subjectId": "s7"}, null, null, {"subjectId": "s8"}, null, {"subjectId": "s8"}]
+    },
+    "homework": [
+        {
+            "id": "hw_1",
+            "subjectId": "s2",
+            "title": "Fiche de lecture - Chapitre 3",
+            "description": "Lire le chapitre 3 du manuel et compléter la fiche de lecture",
+            "date": "2026-09-14",
+            "priority": "high",
+            "type": "reading",
+            "done": false
+        },
+        {
+            "id": "hw_2",
+            "subjectId": "s1",
+            "title": "Exercices page 45-46",
+            "description": "Exercices 1 à 5 sur la vente",
+            "date": "2026-09-15",
+            "priority": "medium",
+            "type": "homework",
+            "done": false
+        },
+        {
+            "id": "hw_3",
+            "subjectId": "s3",
+            "title": "Étude de cas - Sinistre n°4",
+            "description": "Rédiger le compte-rendu de l'étude de cas sur le sinistre n°4",
+            "date": "2026-09-16",
+            "priority": "high",
+            "type": "project",
+            "done": false
+        },
+        {
+            "id": "hw_4",
+            "subjectId": "s5",
+            "title": "Dissertation culture générale",
+            "description": "Sujet : Les enjeux de la communication interculturelle",
+            "date": "2026-09-17",
+            "priority": "medium",
+            "type": "homework",
+            "done": false
+        },
+        {
+            "id": "hw_5",
+            "subjectId": "s4",
+            "title": "Préparation entretien",
+            "description": "Préparer un entretien fictif avec un client sinistré",
+            "date": "2026-09-18",
+            "priority": "medium",
+            "type": "project",
+            "done": false
+        }
+    ]
+}
