@@ -47,13 +47,42 @@
         currentWeekOffset: 0
     };
 
+    // Sync config (stored in localStorage, NOT in state)
+    let syncConfig = {
+        token: '',
+        owner: 'vivaeur08',
+        repo: 'school-planner',
+        autoSync: true,
+        lastSync: null,
+        lastSyncDir: null, // 'push' or 'pull'
+        sha: null,         // SHA of the remote file
+        syncing: false
+    };
+    let _autoPushTimer = null;
+    let _autoPullTimer = null;
+
     // ==================== INIT ====================
     async function init() {
+        loadSyncConfig();
         await loadState();
         setupEventListeners();
+        setupSyncListeners();
         renderCurrentView();
         updateDashboard();
         startDiscordChecker();
+        renderSyncIndicator();
+
+        // Auto-pull on startup (fire-and-forget so splash always hides)
+        if (syncConfig.token && syncConfig.autoSync) {
+            syncPull(true); // not awaited
+        }
+
+        // Auto-sync check every 60s
+        _autoPullTimer = setInterval(() => {
+            if (syncConfig.token && syncConfig.autoSync && !syncConfig.syncing) {
+                syncPull(true);
+            }
+        }, 60000);
 
         // Remove splash
         setTimeout(() => {
@@ -154,10 +183,318 @@
 
     function saveState() {
         try {
+            state._lastModified = new Date().toISOString();
             localStorage.setItem('schoolplanner_data', JSON.stringify(state));
+            // Trigger debounced auto-push
+            scheduleAutoPush();
         } catch (e) {
             console.error('Error saving state:', e);
         }
+    }
+
+    // ==================== GITHUB SYNC ====================
+    function loadSyncConfig() {
+        try {
+            const saved = localStorage.getItem('schoolplanner_sync');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                syncConfig = { ...syncConfig, ...parsed };
+            }
+            // Safety reset: never start stuck in "syncing"
+            syncConfig.syncing = false;
+        } catch (e) {
+            console.error('Error loading sync config:', e);
+        }
+    }
+
+    function saveSyncConfig() {
+        try {
+            localStorage.setItem('schoolplanner_sync', JSON.stringify(syncConfig));
+        } catch (e) {
+            console.error('Error saving sync config:', e);
+        }
+    }
+
+    function scheduleAutoPush() {
+        if (!syncConfig.token || !syncConfig.autoSync) return;
+        if (_autoPushTimer) clearTimeout(_autoPushTimer);
+        _autoPushTimer = setTimeout(() => {
+            _autoPushTimer = null;
+            if (syncConfig.syncing) {
+                // Still busy pulling/pushing; wait and retry instead of losing the change
+                scheduleAutoPush();
+                return;
+            }
+            syncPush(true); // silent = true
+        }, 3000); // debounce 3 seconds
+    }
+
+    async function syncPush(silent = false) {
+        if (!syncConfig.token) {
+            if (!silent) showToast('Configure ton token GitHub d\'abord', 'error');
+            return;
+        }
+        if (syncConfig.syncing) return;
+        syncConfig.syncing = true;
+        renderSyncIndicator();
+        if (!silent) showToast('Envoi vers GitHub...', 'info');
+
+        try {
+            const githubData = {
+                subjects: state.subjects,
+                schedule: state.schedule,
+                homework: state.homework,
+                lastModified: new Date().toISOString()
+            };
+
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(githubData, null, 4))));
+
+            const url = `https://api.github.com/repos/${syncConfig.owner}/${syncConfig.repo}/contents/data/homework.json`;
+
+            // If we don't have the SHA yet, get it first
+            if (!syncConfig.sha) {
+                try {
+                    const getResp = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${syncConfig.token}` }
+                    });
+                    if (getResp.ok) {
+                        const getJson = await getResp.json();
+                        syncConfig.sha = getJson.sha;
+                    }
+                } catch (e) {
+                    // File might not exist yet, that's fine for the first push
+                }
+            }
+
+            const body = {
+                message: `🔄 Sync SchoolPlanner ${new Date().toLocaleString('fr-FR')}`,
+                content: content
+            };
+            if (syncConfig.sha) body.sha = syncConfig.sha;
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${syncConfig.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                syncConfig.sha = result.content.sha;
+                syncConfig.lastSync = new Date().toISOString();
+                syncConfig.lastSyncDir = 'push';
+                saveSyncConfig();
+                renderSyncIndicator();
+                if (!silent) showToast('Poussé sur GitHub ! ✅', 'success');
+            } else {
+                const err = await response.json();
+                throw new Error(err.message || 'Erreur API GitHub');
+            }
+        } catch (e) {
+            console.error('Sync push error:', e);
+            if (!silent) showToast('Erreur push : ' + e.message, 'error');
+            renderSyncIndicator('error');
+        } finally {
+            syncConfig.syncing = false;
+            renderSyncIndicator();
+        }
+    }
+
+    async function syncPull(silent = false) {
+        if (!syncConfig.token) {
+            if (!silent) showToast('Configure ton token GitHub d\'abord', 'error');
+            return;
+        }
+        if (syncConfig.syncing) return;
+        syncConfig.syncing = true;
+        renderSyncIndicator();
+        if (!silent) showToast('Récupération depuis GitHub...', 'info');
+
+        try {
+            const url = `https://api.github.com/repos/${syncConfig.owner}/${syncConfig.repo}/contents/data/homework.json`;
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${syncConfig.token}` }
+            });
+
+            if (response.status === 404) {
+                // File doesn't exist yet — push local data
+                if (!silent) showToast('Fichier distant inexistant, envoi local...', 'info');
+                syncConfig.syncing = false;
+                await syncPush(silent);
+                return;
+            }
+
+            if (!response.ok) throw new Error('Erreur API GitHub');
+
+            const json = await response.json();
+            syncConfig.sha = json.sha;
+
+            const decoded = JSON.parse(decodeURIComponent(escape(atob(json.content))));
+
+            // Merge strategy: merge by ID, keep newer data
+            const remoteHw = decoded.homework || [];
+            const remoteSubj = decoded.subjects || [];
+            const remoteSchedule = decoded.schedule || {};
+            const remoteModified = decoded.lastModified ? new Date(decoded.lastModified) : new Date(0);
+
+            // Check if remote is newer
+            const localModified = state._lastModified ? new Date(state._lastModified) : new Date(0);
+
+            // Always merge (don't skip if same time, to handle concurrent edits)
+            // Homework: union by ID, remote wins for same ID
+            const hwMap = new Map(state.homework.map(h => [h.id, h]));
+            remoteHw.forEach(hw => {
+                const existing = hwMap.get(hw.id);
+                if (!existing) {
+                    hwMap.set(hw.id, hw); // new from remote
+                } else if (remoteModified >= localModified) {
+                    hwMap.set(hw.id, hw); // remote is newer, overwrite
+                }
+                // else keep local (local is newer)
+            });
+
+            // Subjects: union by ID, remote wins for same ID
+            const subjMap = new Map(state.subjects.map(s => [s.id, s]));
+            remoteSubj.forEach(subj => {
+                const existing = subjMap.get(subj.id);
+                if (!existing) {
+                    subjMap.set(subj.id, subj);
+                } else if (remoteModified >= localModified) {
+                    subjMap.set(subj.id, subj);
+                }
+            });
+
+            // Schedule: merge per-day, remote wins for non-null cells if remote is newer
+            const mergedSchedule = JSON.parse(JSON.stringify(state.schedule));
+            Object.keys(remoteSchedule).forEach(day => {
+                if (!mergedSchedule[day]) mergedSchedule[day] = remoteSchedule[day];
+                else {
+                    const remoteSlots = remoteSchedule[day];
+                    for (let i = 0; i < remoteSlots.length; i++) {
+                        if (remoteSlots[i] && remoteModified >= localModified) {
+                            mergedSchedule[day][i] = remoteSlots[i];
+                        }
+                    }
+                }
+            });
+
+            state.homework = [...hwMap.values()];
+            state.subjects = [...subjMap.values()];
+            state.schedule = mergedSchedule;
+            state._lastModified = new Date().toISOString();
+
+            syncConfig.lastSync = new Date().toISOString();
+            syncConfig.lastSyncDir = 'pull';
+            saveSyncConfig();
+            saveState(); // save merged state (won't re-trigger push because of syncing flag)
+            renderSyncIndicator();
+
+            // Update UI
+            renderCurrentView();
+            updateDashboard();
+
+            if (!silent) showToast('Données récupérées depuis GitHub ! 📥', 'success');
+        } catch (e) {
+            console.error('Sync pull error:', e);
+            if (!silent) showToast('Erreur pull : ' + e.message, 'error');
+            renderSyncIndicator('error');
+        } finally {
+            syncConfig.syncing = false;
+            renderSyncIndicator();
+        }
+    }
+
+    function renderSyncIndicator(status) {
+        const el = document.getElementById('sync-indicator');
+        if (!el) return;
+        const iconEl = el.querySelector('i');
+        const labelEl = el.querySelector('.sync-label');
+
+        el.classList.remove('connected', 'syncing', 'error');
+
+        if (status === 'error') {
+            el.classList.add('error');
+            iconEl.className = 'fas fa-exclamation-triangle';
+            labelEl.textContent = 'Erreur';
+            return;
+        }
+
+        if (syncConfig.syncing) {
+            el.classList.add('syncing');
+            iconEl.className = 'fas fa-sync-alt fa-spin';
+            labelEl.textContent = 'Sync...';
+            return;
+        }
+
+        if (syncConfig.token) {
+            el.classList.add('connected');
+            iconEl.className = 'fas fa-cloud';
+            if (syncConfig.lastSync) {
+                const ago = getTimeAgo(new Date(syncConfig.lastSync));
+                labelEl.textContent = `Sync ${ago}`;
+            } else {
+                labelEl.textContent = 'Connecté';
+            }
+        } else {
+            iconEl.className = 'fas fa-cloud';
+            labelEl.textContent = 'Déconnecté';
+        }
+    }
+
+    function getTimeAgo(date) {
+        const diff = Date.now() - date.getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'à l\'instant';
+        if (mins < 60) return `il y a ${mins}min`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `il y a ${hours}h`;
+        return `il y a ${Math.floor(hours / 24)}j`;
+    }
+
+    function setupSyncListeners() {
+        // Save sync config
+        document.getElementById('btn-sync-save').addEventListener('click', () => {
+            syncConfig.token = document.getElementById('sync-token').value.trim();
+            syncConfig.owner = document.getElementById('sync-owner').value.trim();
+            syncConfig.repo = document.getElementById('sync-repo').value.trim();
+            syncConfig.autoSync = document.getElementById('sync-auto').checked;
+            saveSyncConfig();
+            renderSyncIndicator();
+            showToast('Configuration sync sauvegardée ! 💾', 'success');
+
+            // If just connected, do an initial sync
+            if (syncConfig.token) {
+                syncPull();
+            }
+        });
+
+        // Sync now (pull then push)
+        document.getElementById('btn-sync-now').addEventListener('click', async () => {
+            await syncPull();
+            await syncPush();
+        });
+
+        // Manual pull
+        document.getElementById('btn-sync-pull').addEventListener('click', () => syncPull());
+
+        // Manual push
+        document.getElementById('btn-sync-push').addEventListener('click', () => syncPush());
+
+        // Toggle sync panel (from indicator click)
+        window.SchoolPlanner.toggleSyncPanel = function() {
+            switchView('settings');
+            // Focus the token input
+            setTimeout(() => document.getElementById('sync-token').focus(), 300);
+        };
+
+        // Load saved values into inputs
+        document.getElementById('sync-token').value = syncConfig.token || '';
+        document.getElementById('sync-owner').value = syncConfig.owner || 'vivaeur08';
+        document.getElementById('sync-repo').value = syncConfig.repo || 'school-planner';
+        document.getElementById('sync-auto').checked = syncConfig.autoSync !== false;
     }
 
     // ==================== NAVIGATION ====================
@@ -294,7 +631,6 @@
         document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
         document.getElementById('import-file').addEventListener('change', importData);
         document.getElementById('btn-export-github').addEventListener('click', exportForGitHub);
-        document.getElementById('btn-sync-json').addEventListener('click', syncFromJson);
         document.getElementById('btn-clear-data').addEventListener('click', () => {
             if (confirm('⚠️ Supprimer TOUTES les données ?')) {
                 localStorage.removeItem('schoolplanner_data');
