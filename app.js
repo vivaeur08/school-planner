@@ -69,7 +69,7 @@
         setupSyncListeners();
         renderCurrentView();
         updateDashboard();
-        startDiscordChecker();
+
         renderSyncIndicator();
 
         // Auto-pull on startup (fire-and-forget so splash always hides)
@@ -610,8 +610,6 @@
         });
 
         // Discord
-        document.getElementById('btn-save-discord').addEventListener('click', saveDiscordSettings);
-        document.getElementById('btn-test-discord').addEventListener('click', testDiscordWebhook);
 
         // Settings - themes
         document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -697,7 +695,6 @@
             case 'schedule': renderScheduleView(); break;
             case 'homework': renderHomeworkList(); break;
             case 'subjects': renderSubjectsView(); break;
-            case 'discord': loadDiscordSettings(); break;
         }
     }
 
@@ -1417,129 +1414,6 @@
         showToast('Emploi du temps modifié', 'success');
     }
 
-    // ==================== DISCORD ====================
-    function loadDiscordSettings() {
-        document.getElementById('webhook-url').value = state.discord.webhookUrl || '';
-        document.getElementById('alert-time').value = state.discord.alertTime || '19:00';
-        document.getElementById('alert-advance').value = state.discord.alertAdvance || 1;
-        document.getElementById('alerts-enabled').checked = state.discord.enabled || false;
-    }
-
-    function saveDiscordSettings() {
-        state.discord = {
-            webhookUrl: document.getElementById('webhook-url').value,
-            alertTime: document.getElementById('alert-time').value,
-            alertAdvance: parseInt(document.getElementById('alert-advance').value),
-            enabled: document.getElementById('alerts-enabled').checked
-        };
-        saveState();
-        showToast('Paramètres Discord sauvegardés ! 💾', 'success');
-    }
-
-    async function testDiscordWebhook() {
-        const url = document.getElementById('webhook-url').value;
-        if (!url) {
-            showToast('Renseigne l\'URL du webhook d\'abord !', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: '📚 SchoolPlanner',
-                    avatar_url: 'https://cdn-icons-png.flaticon.com/512/2232/2232688.png',
-                    embeds: [{
-                        title: '✅ Test réussi !',
-                        description: 'SchoolPlanner est connecté à ce salon Discord.\nTu recevras des rappels pour tes devoirs !',
-                        color: 0x7c6aef,
-                        fields: [
-                            { name: '📝 Devoirs en attente', value: `${state.homework.filter(h => !h.done).length}`, inline: true },
-                            { name: '📚 Matières', value: `${state.subjects.length}`, inline: true }
-                        ],
-                        footer: { text: 'SchoolPlanner - Ton agenda scolaire' },
-                        timestamp: new Date().toISOString()
-                    }]
-                })
-            });
-
-            showToast(response.ok ? 'Message envoyé sur Discord ! 🎉' : 'Erreur : vérifie l\'URL du webhook', response.ok ? 'success' : 'error');
-        } catch (e) {
-            showToast('Erreur de connexion. Vérifie l\'URL.', 'error');
-        }
-    }
-
-    async function sendDiscordAlert() {
-        if (!state.discord.enabled || !state.discord.webhookUrl) return;
-
-        const now = new Date();
-        const advanceDays = state.discord.alertAdvance || 1;
-        const targetDate = new Date(now);
-        targetDate.setDate(targetDate.getDate() + advanceDays);
-        targetDate.setHours(0, 0, 0, 0);
-
-        const dueHomework = state.homework.filter(h => {
-            if (h.done) return false;
-            const d = new Date(h.date);
-            d.setHours(0, 0, 0, 0);
-            return d <= targetDate;
-        });
-
-        if (dueHomework.length === 0) return;
-
-        const fields = dueHomework.slice(0, 10).map(hw => {
-            const subject = state.subjects.find(s => s.id === hw.subjectId);
-            const date = new Date(hw.date);
-            const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-            const priorityEmoji = hw.priority === 'high' ? '🔴' : hw.priority === 'medium' ? '🟡' : '🟢';
-            return {
-                name: `${priorityEmoji} ${subject ? subject.name : 'Inconnu'}`,
-                value: `${hw.title}\n📅 ${dateStr}`,
-                inline: true
-            };
-        });
-
-        try {
-            await fetch(state.discord.webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: '📚 SchoolPlanner',
-                    avatar_url: 'https://cdn-icons-png.flaticon.com/512/2232/2232688.png',
-                    embeds: [{
-                        title: `⚠️ ${dueHomework.length} devoir${dueHomework.length > 1 ? 's' : ''} non fait${dueHomework.length > 1 ? 's' : ''} !`,
-                        description: 'Voici les devoirs qui arrivent bientôt ou sont en retard :',
-                        color: 0xf87171,
-                        fields: fields,
-                        footer: { text: 'SchoolPlanner - Rappel automatique' },
-                        timestamp: new Date().toISOString()
-                    }]
-                })
-            });
-        } catch (e) {
-            console.error('Discord alert error:', e);
-        }
-    }
-
-    function startDiscordChecker() {
-        setInterval(() => {
-            if (!state.discord.enabled) return;
-            const now = new Date();
-            const alertTime = state.discord.alertTime || '19:00';
-            const [hours, minutes] = alertTime.split(':').map(Number);
-
-            if (now.getHours() === hours && now.getMinutes() === minutes) {
-                const lastAlert = localStorage.getItem('schoolplanner_last_alert');
-                const today = now.toDateString();
-                if (lastAlert !== today) {
-                    sendDiscordAlert();
-                    localStorage.setItem('schoolplanner_last_alert', today);
-                }
-            }
-        }, 60000);
-    }
-
     // ==================== SETTINGS ====================
     function exportData() {
         const data = JSON.stringify(state, null, 2);
@@ -1640,6 +1514,69 @@
         }, 3500);
     }
 
-    // ==================== START ====================
+
+
+    // ==================== COMPTE CLASSE + SIGNATURES ====================
+    // Chaque appareil garde SON membre local (nom ≈ insensible casse, mdp EXACT haché).
+    let classAccount = null; // {name, nameKey}
+
+    async function hashPassword(password, salt) {
+        const data = (salt || '') + ':' + String(password || '');
+        // Web Crypto natif (fiable, dispo en HTTPS = ton site réservé)
+        if (window.crypto && crypto.subtle) {
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) { /* fallback ci-dessous */ }
+        }
+        // Fallback FNV-1a 32 bits (simple, déterministe, sans aucun code rotationnel)
+        let h = 0x811c9dc5;
+        for (let i = 0; i < data.length; i++) {
+            h ^= data.charCodeAt(i);
+            h = Math.imul(h, 0x01000193) >>> 0;
+        }
+        return h.toString(16) + '_len' + data.length;
+    }
+
+    function nameKeyFrom(name) {
+        return nameKey(name);
+    }
+
+    function nameKey(name) {
+        return String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'').trim();
+    }
+
+    function loadClassAccount() {
+        try { const s = localStorage.getItem('schoolplanner_account');
+            if (s) classAccount = JSON.parse(s); } catch(e) {}
+    }
+    function saveClassAccount() {
+        try { localStorage.setItem('schoolplanner_account', JSON.stringify(classAccount||null)); } catch(e) {}
+    }
+
+    // --- membres de la classe (partagés dans le JSON) ---
+    function getMembers() {
+        if (!Array.isArray(state.members)) state.members = [];
+        return state.members;
+    }
+    function findMemberByName(approxName) {
+        const key = nameKey(approxName);
+        if (!key) return null;
+        return getMembers().find(m => m && m.nameKey === key) || null;
+    }
+    function ensureMembersSection(onGithub) {
+        // stocke aussi les members dans les données poussées
+    }
+
+    // ==================== CROCHETS SIGNATURES ====================
+    function currentAuthor() { return classAccount ? classAccount.name : 'Anonyme'; }
+    function signHomeworkFields(hw) {
+        hw.author = currentAuthor();
+        hw.authorKey = classAccount ? classAccount.nameKey : 'anon';
+        hw._lastModified = new Date().toISOString();
+        return hw;
+    }
+
+        // ==================== START ====================
     document.addEventListener('DOMContentLoaded', init);
 })();
