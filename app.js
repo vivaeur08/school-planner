@@ -35,6 +35,7 @@
     let state = {
         subjects: [],
         homework: [],
+        files: [],
         schedule: {},
         discord: {
             webhookUrl: '',
@@ -243,7 +244,12 @@
             const githubData = {
                 subjects: state.subjects,
                 schedule: state.schedule,
-                homework: state.homework,
+                // `done` est STRICTEMENT local : jamais envoyé sur GitHub.
+                homework: state.homework.map(h => {
+                    const copy = Object.assign({}, h);
+                    if ('done' in copy) delete copy.done;
+                    return copy;
+                }),
                 lastModified: new Date().toISOString()
             };
 
@@ -351,7 +357,10 @@
                 if (!existing) {
                     hwMap.set(hw.id, hw); // new from remote
                 } else if (remoteModified >= localModified) {
-                    hwMap.set(hw.id, hw); // remote is newer, overwrite
+                    const localKeptHw = hwMap.get(hw.id);
+            // preserve local done (case « fait » ne quitte JAMAIS l'appareil)
+            const mergedHw = Object.assign({}, hw, { done: localKeptHw ? !!localKeptHw.done : false });
+            hwMap.set(hw.id, mergedHw); // remote is newer, but done stays local
                 }
                 // else keep local (local is newer)
             });
@@ -1519,6 +1528,97 @@
     // ==================== COMPTE CLASSE + SIGNATURES ====================
     // Chaque appareil garde SON membre local (nom ≈ insensible casse, mdp EXACT haché).
     let classAccount = null; // {name, nameKey}
+
+    function renderClassAccountUI() {
+        const authEl = document.getElementById('class-auth-box');
+        const acctEl = document.getElementById('class-account-box');
+        const helloEl = document.getElementById('class-account-hello');
+        const listEl = document.getElementById('class-members-list');
+        if (!classAccount) {
+            if (authEl) authEl.style.display = '';
+            if (acctEl) acctEl.style.display = 'none';
+            return;
+        }
+        if (authEl) authEl.style.display = 'none';
+        if (acctEl) acctEl.style.display = '';
+        if (helloEl) helloEl.innerHTML = '<i class="fas fa-smile"></i> Bonjour ' + escapeHtml(classAccount.name) + ' 👋';
+        if (listEl) {
+            const members = classMembers.length ? classMembers : [{ name: classAccount.name, nameKey: classAccount.nameKey }];
+            listEl.innerHTML = members.map(m =>
+                '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid var(--border,#ececec)">' +
+                '<i class="fas fa-user-circle" style="color:var(--primary,#6366f1);font-size:1.1rem"></i>' +
+                '<div style="flex:1"><strong>' + escapeHtml(m.name) + '</strong>' +
+                (m.role ? '<small style="color:var(--text-muted);margin-left:0.4rem">' + escapeHtml(m.role) + '</small>' : '') +
+                '</div></div>').join('');
+        }
+    }
+
+    async function createClassAccount(name, password) {
+        try {
+            const key = nameKeyFrom(name);
+            if (!key) { showToast('Entre un nom d\'au moins 2 lettres', 'error'); return null; }
+            if (classAccount) { showToast('Déjà connecté en tant que ' + classAccount.name, 'info'); return classAccount; }
+            const passHash = await hashPassword(password, key);
+            const member = {
+                name: String(name).trim(),
+                nameKey: key,
+                role: 'membre',
+                joinedAt: new Date().toISOString(),
+                passHash: passHash,
+                salt: key
+            };
+            if (!Array.isArray(state.members)) state.members = [];
+            const existing = state.members.find(m => m && m.nameKey === key);
+            if (existing) {
+                // ton nom existe déjà — compare le mot de passe EXACT
+                const match = await hashPassword(password, existing.salt || key);
+                if (match !== existing.passHash) {
+                    showToast("Ce nom est pris et le mot de passe ne correspond pas", 'error');
+                    return null;
+                }
+                showToast('Bienvenue de retour, ' + existing.name + ' !', 'success');
+                window.SchoolPlanner.classAccount = existing;
+                saveClassAccount(); renderClassAccountUI(); renderCurrentView();
+                return existing;
+            }
+            // premier arrivé → déclaré créateur, ensuite chacun s'ajoute
+            member.role = state.members.length === 0 ? 'créateur' : 'membre';
+            state.members.push(member);
+            window.SchoolPlanner.classAccount = member;
+            saveClassAccount(); saveState(); renderClassAccountUI(); renderCurrentView();
+            scheduleAutoPush();
+            showToast('Compte créé, bienvenue ' + String(name).trim() + ' ! 🎉', 'success');
+            return member;
+        } catch (e) { console.error('createClassAccount err', e); return null; }
+    }
+
+    async function loginClassAccount(name, password) {
+        try {
+            const key = nameKeyFrom(name);
+            if (!key) { showToast('Entre un nom valide', 'error'); return null; }
+            const existing = (state.members || []).find(m => m && m.nameKey === key);
+            if (!existing) {
+                showToast('Aucun membre avec ce nom — crée ton entrée d\'abord (nom, même si tu approches)', 'error');
+                return null;
+            }
+            if (!password) { showToast('Mot de passe requis', 'error'); return null; }
+            const match = await hashPassword(password, existing.salt || key);
+            if (match !== existing.passHash) {
+                showToast("Mot de passe incorrect — il doit être EXACT", 'error');
+                return null;
+            }
+            window.SchoolPlanner.classAccount = existing;
+            saveClassAccount(); renderClassAccountUI(); renderCurrentView();
+            showToast('Connecté : ' + existing.name + ' 🔐', 'success');
+            return existing;
+        } catch (e) { console.error('loginClassAccount err', e); return null; }
+    }
+
+    function logoutClassAccount() {
+        window.SchoolPlanner.classAccount = null;
+        saveClassAccount(); renderClassAccountUI(); renderCurrentView();
+        showToast('Déconnecté', 'info');
+    }
 
     async function hashPassword(password, salt) {
         const data = (salt || '') + ':' + String(password || '');
