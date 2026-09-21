@@ -1,23 +1,185 @@
 {
     "subjects": [
-        { "id": "s1", "name": "VENTE & DEV. COMMER.", "teacher": "MARTIN N.", "room": "F 301 - 302 BTS Tert", "color": "#f43f5e" },
-        { "id": "s2", "name": "ANGLAIS LVA", "teacher": "CATEAULT F.", "room": "F 301 - 302 BTS Tert", "color": "#f97316" },
-        { "id": "s3", "name": "GESTION SINISTRES", "teacher": "DAVOUST S.", "room": "F 301 - 302 BTS Tert", "color": "#8b5cf6" },
-        { "id": "s4", "name": "CULT.PROFES.APPLIQ", "teacher": "ETIENNE G.", "room": "F 301 - 302 BTS Tert", "color": "#14b8a6" },
-        { "id": "s5", "name": "CULTURE GENE.ET EXPR", "teacher": "JOURDAN G.", "room": "F 301 - 302 BTS Tert", "color": "#3b82f6" },
-        { "id": "s6", "name": "RELAT.CLIENT SINISTRE", "teacher": "YOUSFI I.", "room": "F 301 - 302 BTS Tert", "color": "#ec4899" },
-        { "id": "s7", "name": "ACCOMPAGNEMT. PERSO.", "teacher": "JOURDAN G.", "room": "F 304 BTS Tert info", "color": "#06b6d4" },
-        { "id": "s8", "name": "AT. PROFESSIONNALIS.", "teacher": "DAVOUST S., ETIENNE G.", "room": "F 101-102, F 104-107 info", "color": "#6b7280" },
-        { "id": "s9", "name": "RESTI. VECU EN ENT.", "teacher": "", "room": "G 102", "color": "#6366f1" }
+        {
+            "id": "s1",
+            "name": "VENTE & DEV. COMMER.",
+            "teacher": "MARTIN N.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#e74c3c"
+        },
+        {
+            "id": "s2",
+            "name": "ANGLAIS LVA",
+            "teacher": "CATEAULT F.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#e67e22"
+        },
+        {
+            "id": "s3",
+            "name": "GESTION SINISTRES",
+            "teacher": "DAVOUST S.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#9b59b6"
+        },
+        {
+            "id": "s4",
+            "name": "CULT.PROFES.APPLIQ",
+            "teacher": "ETIENNE G.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#1abc9c"
+        },
+        {
+            "id": "s5",
+            "name": "CULTURE GENE.ET EXPR",
+            "teacher": "JOURDAN G.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#3498db"
+        },
+        {
+            "id": "s6",
+            "name": "RELAT.CLIENT SINISTRE",
+            "teacher": "YOUSFI I.",
+            "room": "F 301 - 302 BTS Tert",
+            "color": "#fd79a8"
+        },
+        {
+            "id": "s7",
+            "name": "ACCOMPAGNEMT. PERSO.",
+            "teacher": "JOURDAN G.",
+            "room": "F 304 BTS Tert info",
+            "color": "#00cec9"
+        },
+        {
+            "id": "s8",
+            "name": "AT. PROFESSIONNALIS.",
+            "teacher": "DAVOUST S., ETIENNE G.",
+            "room": "F 101-102, F 104-107 info",
+            "color": "#636e72"
+        },
+        {
+            "id": "s9",
+            "name": "RESTI. VECU EN ENT.",
+            "teacher": "",
+            "room": "G 102",
+            "color": "#6c5ce7"
+        }
     ],
     "schedule": {
-        "lundi": [null, {"subjectId": "s2"}, {"subjectId": "s3"}, null, {"subjectId": "s4"}, null, {"subjectId": "s6"}, {"subjectId": "s5"}, null],
-        "mardi": [{"subjectId": "s1"}, {"subjectId": "s2"}, null, null, null, null, {"subjectId": "s3"}, null, null],
-        "mercredi": [null, null, {"subjectId": "s4"}, {"subjectId": "s3"}, null, null, {"subjectId": "s1"}, {"subjectId": "s9"}, null],
-        "jeudi": [null, null, null, null, {"subjectId": "s5"}, null, null, {"subjectId": "s6"}, null],
-        "vendredi": [{"subjectId": "s1"}, null, {"subjectId": "s4"}, {"subjectId": "s7"}, null, null, {"subjectId": "s8"}, null, {"subjectId": "s8"}]
+        "lundi": [
+            null,
+            {
+                "subjectId": "s2"
+            },
+            {
+                "subjectId": "s3"
+            },
+            null,
+            {
+                "subjectId": "s4"
+            },
+            null,
+            {
+                "subjectId": "s6"
+            },
+            {
+                "subjectId": "s5"
+            },
+            null
+        ],
+        "mardi": [
+            {
+                "subjectId": "s1"
+            },
+            {
+                "subjectId": "s2"
+            },
+            null,
+            null,
+            null,
+            null,
+            {
+                "subjectId": "s3"
+            },
+            null,
+            null
+        ],
+        "mercredi": [
+            null,
+            null,
+            {
+                "subjectId": "s4"
+            },
+            {
+                "subjectId": "s3"
+            },
+            null,
+            null,
+            {
+                "subjectId": "s1"
+            },
+            {
+                "subjectId": "s9"
+            },
+            null
+        ],
+        "jeudi": [
+            null,
+            null,
+            null,
+            null,
+            {
+                "subjectId": "s5"
+            },
+            null,
+            null,
+            {
+                "subjectId": "s6"
+            },
+            null
+        ],
+        "vendredi": [
+            {
+                "subjectId": "s1"
+            },
+            null,
+            {
+                "subjectId": "s4"
+            },
+            {
+                "subjectId": "s7"
+            },
+            null,
+            null,
+            {
+                "subjectId": "s8"
+            },
+            null,
+            {
+                "subjectId": "s8"
+            }
+        ]
     },
     "homework": [
+        {
+            "id": "hw_1789109659419",
+            "subjectId": "s6",
+            "title": "Oral restitution Assurance",
+            "description": "5 minutes, pas de powerpoint",
+            "date": "2026-09-24",
+            "priority": "medium",
+            "type": "exam",
+            "done": false
+        },
+        {
+            "id": "hw_1789635770840",
+            "subjectId": "s4",
+            "title": "Devoir  sur les propositions d'assurance",
+            "description": "",
+            "date": "2026-09-24",
+            "priority": "high",
+            "type": "exam",
+            "done": false
+        },
         {
             "id": "hw_1",
             "subjectId": "s2",
@@ -68,5 +230,6 @@
             "type": "project",
             "done": false
         }
-    ]
+    ],
+    "lastModified": "2026-09-21T09:21:12.030Z"
 }
